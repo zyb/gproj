@@ -1,0 +1,82 @@
+name: Build and Test Screenshot Tool
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build and Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # For now, only ubuntu-latest. Can be expanded later.
+        os: [ubuntu-latest] 
+        # Example of matrix for Python versions, can be simplified if only one is needed
+        python-version: ['3.8'] 
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4 # Updated to v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5 # Updated to v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      # IMPORTANT NOTE for cross-platform builds:
+      # On different OS runners (especially Linux), additional dependencies might be needed for GUI libraries and Tesseract OCR.
+      # For example, on Linux, you might need:
+      # sudo apt-get update
+      # sudo apt-get install -y python3-tk tk-dev libtk-img tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
+      # (Adjust language packs like tesseract-ocr-chi-sim as needed for your project)
+      # For Windows/macOS, Tesseract installation would also need specific steps if not bundled.
+
+    - name: Run Linters and Formatters (Placeholder)
+      run: |
+        echo "Placeholder for running linters like Flake8 or formatters like Black."
+        # Example (uncomment and configure when ready):
+        # pip install flake8 black
+        # flake8 src tests
+        # black --check src tests
+
+    - name: Run Tests (Placeholder)
+      run: |
+        echo "Placeholder for running unit tests and integration tests with pytest or unittest."
+        # Example (uncomment and configure when ready):
+        # pip install pytest
+        # pytest tests/
+
+    - name: Build Application (Placeholder)
+      run: |
+        echo "Placeholder for building the application with PyInstaller or similar tools."
+        # Example for PyInstaller (uncomment and configure when ready):
+        # pip install pyinstaller
+        # pyinstaller --onefile --windowed --name ScreenshotToolPro src/main.py
+        #
+        # NOTE for cross-platform builds:
+        # The build command (especially for PyInstaller) will differ for each OS.
+        # For Windows: pyinstaller --onefile --windowed ... src/main.py
+        # For macOS: pyinstaller --onefile --windowed ... src/main.py (might need --osx-bundle-identifier)
+        # For Linux: pyinstaller --onefile ... src/main.py (windowed might behave differently)
+        # You would typically have OS-specific steps or use a build script that handles this.
+
+#    - name: Upload Build Artifacts (Placeholder)
+#      uses: actions/upload-artifact@v4 # Updated to v4
+#      if: always() # Or use `if: success()` to only upload on successful build
+#      with:
+#        name: screenshot-tool-build-${{ matrix.os }} # Artifact name will include OS
+#        path: |
+#          dist/ScreenshotToolPro* 
+#          # Adjust path to where your built executable is located.
+#          # The asterisk can help capture platform-specific extensions (e.g., .exe, .app).
+#          # Ensure the 'dist' directory or your build output directory is correctly specified.
+#        # retention-days: 7 # Optional: How long to keep artifacts
+#      # Note: This step is a placeholder. The 'path' needs to point to actual build outputs.
+#      # If the build step is not run, this will likely not find any files to upload.
