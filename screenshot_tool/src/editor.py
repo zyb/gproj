@@ -33,7 +33,7 @@ class ImageEditor:
         self.history_index = 0
 
         # Drawing defaults
-        self.draw_color = "red"
+        self.current_color = "red" # Renamed from draw_color
         self.line_width = 3
         self.font_size = 20
         self.font_family = "Arial" # A common default
@@ -82,12 +82,13 @@ class ImageEditor:
         btn_mosaic = tk.Button(toolbar, text="Mosaic", command=lambda: self.set_tool("mosaic_region"))
         btn_mosaic.pack(fill=tk.X, pady=2)
         
-        tk.Label(toolbar, text="Options", font=("Arial", 10, "bold")).pack(pady=(10,0))
+        tk.Label(toolbar, text="Options", font=("Arial", 10, "bold")).pack(pady=(10,0)) # This label might need i18n if not already
         
-        btn_color = tk.Button(toolbar, text="Color", command=self.choose_color)
-        btn_color.pack(fill=tk.X, pady=2)
+        # Updated button text to use i18n key and command to renamed method
+        self.btn_select_color = tk.Button(toolbar, text=i18n._("button_select_color"), command=self._select_pen_color)
+        self.btn_select_color.pack(fill=tk.X, pady=2)
 
-        btn_line_width = tk.Button(toolbar, text="Line Width", command=self.choose_line_width)
+        btn_line_width = tk.Button(toolbar, text="Line Width", command=self.choose_line_width) # Assuming "Line Width" has i18n key or is fine
         btn_line_width.pack(fill=tk.X, pady=2)
 
         btn_font_size = tk.Button(toolbar, text="Font Size", command=self.choose_font_size)
@@ -164,11 +165,13 @@ class ImageEditor:
             self.canvas.config(cursor="plus") # Cursor for selection type tools
 
 
-    def choose_color(self):
-        color_code = colorchooser.askcolor(title="Choose color", parent=self.master)
-        if color_code:
-            self.draw_color = color_code[1]
-            print(f"Color set to: {self.draw_color}")
+    def _select_pen_color(self): # Renamed from choose_color
+        # Use self.current_color as the initial color for the dialog
+        color_code = colorchooser.askcolor(initialcolor=self.current_color, title="Choose Pen Color", parent=self.master)
+        if color_code and color_code[1]: # Check if a color was selected and hex string is available
+            self.current_color = color_code[1]
+            print(f"Pen color set to: {self.current_color}")
+            # Optional: Update a UI element to show the new color, e.g., self.color_preview.config(bg=self.current_color)
 
     def choose_line_width(self):
         width = simpledialog.askinteger("Line Width", "Enter line width (e.g., 1-10):",
@@ -194,16 +197,16 @@ class ImageEditor:
                 self.canvas.delete(self.temp_drawing_item)
             if self.current_tool == "rectangle" or self.current_tool == "crop" or self.current_tool == "blur_region" or self.current_tool == "mosaic_region":
                 self.temp_drawing_item = self.canvas.create_rectangle(self.start_x, self.start_y, self.start_x, self.start_y,
-                                                                    outline=self.draw_color, width=self.line_width)
+                                                                    outline=self.current_color, width=self.line_width)
             elif self.current_tool == "ellipse":
                  self.temp_drawing_item = self.canvas.create_oval(self.start_x, self.start_y, self.start_x, self.start_y,
-                                                                    outline=self.draw_color, width=self.line_width)
+                                                                    outline=self.current_color, width=self.line_width)
             elif self.current_tool == "line":
                 self.temp_drawing_item = self.canvas.create_line(self.start_x, self.start_y, self.start_x, self.start_y,
-                                                                 fill=self.draw_color, width=self.line_width)
+                                                                 fill=self.current_color, width=self.line_width)
             elif self.current_tool == "arrow":
                  self.temp_drawing_item = self.canvas.create_line(self.start_x, self.start_y, self.start_x, self.start_y,
-                                                                 fill=self.draw_color, width=self.line_width, arrow=tk.LAST)
+                                                                 fill=self.current_color, width=self.line_width, arrow=tk.LAST)
         elif self.current_tool == "pen":
             self.image_draw = ImageDraw.Draw(self.image_display) # Prepare to draw on Pillow image
 
@@ -214,9 +217,15 @@ class ImageEditor:
         if self.temp_drawing_item and self.current_tool in ["rectangle", "ellipse", "line", "arrow", "crop", "blur_region", "mosaic_region"]:
             self.canvas.coords(self.temp_drawing_item, self.start_x, self.start_y, cur_x, cur_y)
         elif self.current_tool == "pen" and self.start_x is not None and self.start_y is not None:
-            self.image_draw.line([(self.start_x, self.start_y), (cur_x, cur_y)], 
-                                 fill=self.draw_color, width=self.line_width, capstyle="round", joinstyle="round")
-            self.start_x, self.start_y = cur_x, cur_y # Update start for next segment
+            # Map canvas coordinates to image coordinates for pen tool
+            img_cur_x, img_cur_y = self._get_image_coords(cur_x, cur_y)
+            img_start_x, img_start_y = self._get_image_coords(self.start_x, self.start_y)
+
+            self.image_draw.line([(img_start_x, img_start_y), (img_cur_x, img_cur_y)],
+                                 fill=self.current_color, width=self.line_width, capstyle="round", joinstyle="round")
+            
+            # Update start_x, start_y with the original canvas coordinates for the next segment of this drag
+            self.start_x, self.start_y = cur_x, cur_y 
             self.display_image_on_canvas() # Update display
 
     def on_canvas_release(self, event):
@@ -250,7 +259,7 @@ class ImageEditor:
                         font = ImageFont.load_default() # Absolute fallback
                 
                 self.image_draw = ImageDraw.Draw(self.image_display)
-                self.image_draw.text((sx_text, sy_text), text_to_add, font=font, fill=self.draw_color)
+                self.image_draw.text((sx_text, sy_text), text_to_add, font=font, fill=self.current_color)
                 self.add_history_state()
                 self.display_image_on_canvas()
             self.start_x, self.start_y = None, None # Reset after text is placed
@@ -266,19 +275,19 @@ class ImageEditor:
             # However, for lines/arrows, the original start/end points matter for direction
             self.image_draw = ImageDraw.Draw(self.image_display)
             if self.current_tool == "rectangle":
-                self.image_draw.rectangle([min(sx,ex), min(sy,ey), max(sx,ex), max(sy,ey)], outline=self.draw_color, width=self.line_width)
+                self.image_draw.rectangle([min(sx,ex), min(sy,ey), max(sx,ex), max(sy,ey)], outline=self.current_color, width=self.line_width)
             elif self.current_tool == "ellipse":
-                self.image_draw.ellipse([min(sx,ex), min(sy,ey), max(sx,ex), max(sy,ey)], outline=self.draw_color, width=self.line_width)
+                self.image_draw.ellipse([min(sx,ex), min(sy,ey), max(sx,ex), max(sy,ey)], outline=self.current_color, width=self.line_width)
             elif self.current_tool == "line":
                  # Use original mapped start/end for lines to preserve direction
                 sx_orig, sy_orig = self._get_image_coords(self.start_x, self.start_y)
                 ex_orig, ey_orig = self._get_image_coords(end_x, end_y)
-                self.image_draw.line([sx_orig, sy_orig, ex_orig, ey_orig], fill=self.draw_color, width=self.line_width)
+                self.image_draw.line([sx_orig, sy_orig, ex_orig, ey_orig], fill=self.current_color, width=self.line_width)
             elif self.current_tool == "arrow":
                 sx_orig, sy_orig = self._get_image_coords(self.start_x, self.start_y)
                 ex_orig, ey_orig = self._get_image_coords(end_x, end_y)
-                self.image_draw.line([sx_orig, sy_orig, ex_orig, ey_orig], fill=self.draw_color, width=self.line_width)
-                self._draw_arrowhead(self.image_draw, sx_orig, sy_orig, ex_orig, ey_orig, self.draw_color, self.line_width)
+                self.image_draw.line([sx_orig, sy_orig, ex_orig, ey_orig], fill=self.current_color, width=self.line_width)
+                self._draw_arrowhead(self.image_draw, sx_orig, sy_orig, ex_orig, ey_orig, self.current_color, self.line_width)
 
             if self.temp_drawing_item:
                 self.canvas.delete(self.temp_drawing_item)
@@ -421,7 +430,7 @@ class ImageEditor:
         py2 = y2 - arrow_length * math.sin(angle + arrow_degrees)
         
         # Draw filled polygon for arrowhead
-        draw.polygon([(x2, y2), (px1, py1), (px2, py2)], fill=color)
+        draw.polygon([(x2, y2), (px1, py1), (px2, py2)], fill=self.current_color) # Use self.current_color if 'color' param is not specific
 
 
     def add_history_state(self):

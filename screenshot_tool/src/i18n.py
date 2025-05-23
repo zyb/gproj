@@ -19,6 +19,7 @@ TRANSLATIONS = {
     "button_region_shot": {"en": "Select Region", "zh": "选区截图"},
     "button_scrolling_capture": {"en": "Scrolling", "zh": "长截图"},
     "button_screen_recording": {"en": "Record Screen", "zh": "录屏"},
+    "button_select_color": {"en": "Color", "zh": "颜色"},
     
     "status_idle": {"en": "Idle", "zh": "空闲"},
     "status_recording_start_prompt": {"en": "Screen recording started (placeholder).", "zh": "屏幕录制已开始（占位符）。"},
