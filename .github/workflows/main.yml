@@ -67,16 +67,16 @@ jobs:
         # For Linux: pyinstaller --onefile ... src/main.py (windowed might behave differently)
         # You would typically have OS-specific steps or use a build script that handles this.
 
-    - name: Upload Build Artifacts (Placeholder)
-      uses: actions/upload-artifact@v4 # Updated to v4
-      if: always() # Or use `if: success()` to only upload on successful build
-      with:
-        name: screenshot-tool-build-${{ matrix.os }} # Artifact name will include OS
-        path: |
-          dist/ScreenshotToolPro* 
-          # Adjust path to where your built executable is located.
-          # The asterisk can help capture platform-specific extensions (e.g., .exe, .app).
-          # Ensure the 'dist' directory or your build output directory is correctly specified.
-        # retention-days: 7 # Optional: How long to keep artifacts
-      # Note: This step is a placeholder. The 'path' needs to point to actual build outputs.
-      # If the build step is not run, this will likely not find any files to upload.
+#    - name: Upload Build Artifacts (Placeholder)
+#      uses: actions/upload-artifact@v4 # Updated to v4
+#      if: always() # Or use `if: success()` to only upload on successful build
+#      with:
+#        name: screenshot-tool-build-${{ matrix.os }} # Artifact name will include OS
+#        path: |
+#          dist/ScreenshotToolPro* 
+#          # Adjust path to where your built executable is located.
+#          # The asterisk can help capture platform-specific extensions (e.g., .exe, .app).
+#          # Ensure the 'dist' directory or your build output directory is correctly specified.
+#        # retention-days: 7 # Optional: How long to keep artifacts
+#      # Note: This step is a placeholder. The 'path' needs to point to actual build outputs.
+#      # If the build step is not run, this will likely not find any files to upload.
