@@ -12,8 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # For now, only ubuntu-latest. Can be expanded later.
-        os: [ubuntu-latest] 
+        os: [ubuntu-latest, windows-latest, macos-latest] 
         # Example of matrix for Python versions, can be simplified if only one is needed
         python-version: ['3.8'] 
 
@@ -30,13 +29,27 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r screenshot_tool/requirements.txt
-      # IMPORTANT NOTE for cross-platform builds:
-      # On different OS runners (especially Linux), additional dependencies might be needed for GUI libraries and Tesseract OCR.
-      # For example, on Linux, you might need:
-      # sudo apt-get update
-      # sudo apt-get install -y python3-tk tk-dev libtk-img tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
-      # (Adjust language packs like tesseract-ocr-chi-sim as needed for your project)
-      # For Windows/macOS, Tesseract installation would also need specific steps if not bundled.
+
+    - name: Install OS-specific dependencies
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update -y
+          sudo apt-get install -y python3-tk tesseract-ocr tesseract-ocr-chi-sim libxtst-dev libxext-dev libxrandr-dev libjpeg-dev libpng-dev libtiff-dev zlib1g-dev
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install tesseract tesseract-lang pkg-config # pkg-config might be needed for some Pillow features
+          # For macOS, Pillow usually finds Tesseract if installed via Homebrew. Tkinter is usually bundled.
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          echo "Windows: Attempting to install Tesseract OCR using Chocolatey"
+          choco install tesseract --params "/Lang=eng+chi_sim" --yes --force || echo "Chocolatey Tesseract install failed or choco not available."
+          # Tkinter is usually bundled with Python on Windows.
+          # Pillow should find Tesseract if its installation path is added to PATH by the installer.
+          # Further PATH adjustments for Tesseract might be needed if choco doesn't handle it fully.
+          # Example: set PATH=%PATH%;C:\Program Files\Tesseract-OCR
+        fi
+      shell: bash # Important for cross-platform consistency of if/else syntax and commands like choco
+
+    - name: Install PyInstaller
+      run: pip install pyinstaller
 
     - name: Run Linters and Formatters (Placeholder)
       run: |
@@ -53,30 +66,39 @@ jobs:
         # pip install pytest
         # pytest tests/
 
-    - name: Build Application (Placeholder)
+    - name: Build Application with PyInstaller
       run: |
-        echo "Placeholder for building the application with PyInstaller or similar tools."
-        # Example for PyInstaller (uncomment and configure when ready):
-        # pip install pyinstaller
-        # pyinstaller --onefile --windowed --name ScreenshotToolPro src/main.py
-        #
-        # NOTE for cross-platform builds:
-        # The build command (especially for PyInstaller) will differ for each OS.
-        # For Windows: pyinstaller --onefile --windowed ... src/main.py
-        # For macOS: pyinstaller --onefile --windowed ... src/main.py (might need --osx-bundle-identifier)
-        # For Linux: pyinstaller --onefile ... src/main.py (windowed might behave differently)
-        # You would typically have OS-specific steps or use a build script that handles this.
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          # Assuming assets are in screenshot_tool/assets and need to be in the final package's assets folder
+          # PyInstaller path separators are POSIX-like (/)
+          # i18n.py is automatically included as it's imported.
+          pyinstaller --onefile --windowed --name "ScreenshotToolPro-${{ matrix.os }}" \
+            --add-data "screenshot_tool/assets:assets" \
+            screenshot_tool/src/main.py
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          pyinstaller --onefile --windowed --name "ScreenshotToolPro-${{ matrix.os }}" \
+            --add-data "screenshot_tool/assets:assets" \
+            # --icon="screenshot_tool/assets/app_icon.icns" # Uncomment and provide app_icon.icns
+            screenshot_tool/src/main.py
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          # Windows uses ; as path separator for PyInstaller's --add-data if multiple sources for one target,
+          # but for --add-data "source:target" or "source;target_in_spec", the CLI usually takes one pair per option.
+          # Using POSIX-like for source here for consistency, PyInstaller often handles it.
+          pyinstaller --onefile --windowed --name "ScreenshotToolPro-${{ matrix.os }}.exe" \
+            --add-data "screenshot_tool/assets;assets" \
+            # --icon="screenshot_tool/assets/app_icon.ico" # Uncomment and provide app_icon.ico
+            screenshot_tool/src/main.py
+        fi
+      # shell: bash # Not strictly needed here if using only PyInstaller commands, but good for consistency if complex scripts evolve.
 
-#    - name: Upload Build Artifacts (Placeholder)
-#      uses: actions/upload-artifact@v4 # Updated to v4
-#      if: always() # Or use `if: success()` to only upload on successful build
-#      with:
-#        name: screenshot-tool-build-${{ matrix.os }} # Artifact name will include OS
-#        path: |
-#          dist/ScreenshotToolPro* 
-#          # Adjust path to where your built executable is located.
-#          # The asterisk can help capture platform-specific extensions (e.g., .exe, .app).
-#          # Ensure the 'dist' directory or your build output directory is correctly specified.
-#        # retention-days: 7 # Optional: How long to keep artifacts
-#      # Note: This step is a placeholder. The 'path' needs to point to actual build outputs.
-#      # If the build step is not run, this will likely not find any files to upload.
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      if: always() # Or use `if: success()` to only upload on successful build. `always()` useful for debugging failed builds too.
+      with:
+        name: ScreenshotToolPro-build-${{ matrix.os }} # Ensures unique artifact name per OS
+        path: |
+          dist/ScreenshotToolPro-${{ matrix.os }}*
+          # For Windows, the asterisk will include the .exe which is already part of the name from PyInstaller step
+          # For macOS, if it's an .app bundle, PyInstaller might create it in dist/
+          # Ensure this path correctly captures the output from PyInstaller.
+        # retention-days: 7 # Optional: How long to keep artifacts
