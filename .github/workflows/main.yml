@@ -73,20 +73,20 @@ jobs:
           # PyInstaller path separators are POSIX-like (/)
           # i18n.py is automatically included as it's imported.
           pyinstaller --onefile --windowed --name "ScreenshotToolPro-${{ matrix.os }}" \
-            --add-data "screenshot_tool/assets:assets" \
+            --add-data "screenshot_tool/src/assets:assets" \
             screenshot_tool/src/main.py
         elif [ "$RUNNER_OS" == "macOS" ]; then
           pyinstaller --onefile --windowed --name "ScreenshotToolPro-${{ matrix.os }}" \
-            --add-data "screenshot_tool/assets:assets" \
-            # --icon="screenshot_tool/assets/app_icon.icns" # Uncomment and provide app_icon.icns
+            --add-data "screenshot_tool/src/assets:assets" \
+            # --icon="screenshot_tool/src/assets/app_icon.icns" # Uncomment and provide app_icon.icns in src/assets
             screenshot_tool/src/main.py
         elif [ "$RUNNER_OS" == "Windows" ]; then
           # Windows uses ; as path separator for PyInstaller's --add-data if multiple sources for one target,
           # but for --add-data "source:target" or "source;target_in_spec", the CLI usually takes one pair per option.
           # Using POSIX-like for source here for consistency, PyInstaller often handles it.
           pyinstaller --onefile --windowed --name "ScreenshotToolPro-${{ matrix.os }}.exe" \
-            --add-data "screenshot_tool/assets;assets" \
-            # --icon="screenshot_tool/assets/app_icon.ico" # Uncomment and provide app_icon.ico
+            --add-data "screenshot_tool/src/assets;assets" \
+            # --icon="screenshot_tool/src/assets/app_icon.ico" # Uncomment and provide app_icon.ico in src/assets
             screenshot_tool/src/main.py
         fi
       # shell: bash # Not strictly needed here if using only PyInstaller commands, but good for consistency if complex scripts evolve.
