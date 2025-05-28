@@ -68,6 +68,24 @@ jobs:
 
     - name: Build Application with PyInstaller
       run: |
+        echo "Current working directory: $(pwd)"
+        echo "Listing files in current directory (root of checkout):"
+        ls -lR .
+        echo "--------------------------------------------------"
+        echo "Listing files in screenshot_tool/ directory:"
+        ls -lR screenshot_tool
+        echo "--------------------------------------------------"
+        echo "Listing files in screenshot_tool/src/ directory:"
+        ls -lR screenshot_tool/src
+        echo "--------------------------------------------------"
+        echo "Checking for screenshot_tool/src/assets/ directory specifically:"
+        if [ -d "screenshot_tool/src/assets" ]; then
+          echo "screenshot_tool/src/assets/ directory FOUND. Listing contents:"
+          ls -lR screenshot_tool/src/assets
+        else
+          echo "screenshot_tool/src/assets/ directory NOT FOUND."
+        fi
+        echo "--------------------------------------------------"
         if [ "$RUNNER_OS" == "Linux" ]; then
           # Assuming assets are in screenshot_tool/assets and need to be in the final package's assets folder
           # PyInstaller path separators are POSIX-like (/)
